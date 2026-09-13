@@ -270,4 +270,29 @@ describe('createGoogleDriveProvider', () => {
       reason: 'anonymous retrieval failed: connection refused',
     });
   });
+
+  it('retries transient responses with bounded backoff', async () => {
+    const provider = createGoogleDriveProvider();
+    let attempts = 0;
+    const observation = await provider.observe(
+      { id: 'zine-001', url: 'https://drive.google.com/file/d/file-123/view' },
+      {
+        profile,
+        config: { ...config, retries: 1 },
+        providerConfig: {},
+        network: async () => {
+          attempts += 1;
+          return attempts === 1
+            ? new Response(null, { status: 503 })
+            : new Response('%PDF-1.7\nfixture\n%%EOF', {
+                status: 200,
+                headers: { 'content-type': 'application/pdf' },
+              });
+        },
+      },
+    );
+
+    expect(attempts).toBe(2);
+    expect(observation.outcome).toBe('available');
+  });
 });

@@ -72,10 +72,11 @@ async function observeDriveResource(
   }
 
   try {
-    const response = await requestWithTimeout(
+    const response = await requestWithRetries(
       context.network,
       downloadUrl,
       context.config.timeoutMs,
+      context.config.retries,
     );
     const contentType = response.headers
       .get('content-type')
@@ -89,7 +90,7 @@ async function observeDriveResource(
     const baseEvidence = {
       httpStatus: response.status,
       contentType,
-      responseUrl: response.url || undefined,
+      responseUrl: sanitizeResponseUrl(response.url),
       redirected: response.redirected,
     };
     const declaredLength = Number(response.headers.get('content-length'));
@@ -257,6 +258,39 @@ async function requestWithTimeout(
     ]);
   } finally {
     if (timeout) clearTimeout(timeout);
+  }
+}
+
+async function requestWithRetries(
+  network: ProviderContext['network'],
+  url: URL,
+  timeoutMs: number,
+  retries: number,
+): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const response = await requestWithTimeout(network, url, timeoutMs);
+      if (!isTransientStatus(response.status) || attempt === retries)
+        return response;
+    } catch (error) {
+      if (attempt === retries) throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10 * 2 ** attempt));
+  }
+  throw new Error('retry policy exhausted');
+}
+
+function isTransientStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+function sanitizeResponseUrl(value: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return undefined;
   }
 }
 
