@@ -1,12 +1,7 @@
+import { outcomes } from './types.js';
 import type { Observation, Outcome, RunReport } from './types.js';
 
-const outcomeOrder: Outcome[] = [
-  'available',
-  'inaccessible',
-  'inconclusive',
-  'unsupported',
-  'invalid-input',
-];
+const outcomeOrder: Outcome[] = [...outcomes];
 
 export function renderMarkdownReport(report: RunReport): string {
   const totals = new Map<Outcome, number>(

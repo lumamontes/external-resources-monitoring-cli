@@ -61,5 +61,28 @@ describe('resource-monitor CLI', () => {
     expect(workflow).toContain('actions/upload-artifact@v4');
     expect(workflow).toContain('if: always()');
     expect(workflow).not.toContain('GOOGLE_');
+
+    const directory = await mkdtemp(join(tmpdir(), 'resource-workflow-'));
+    try {
+      await execFileAsync(process.execPath, [
+        'dist/cli.js',
+        '--input',
+        'examples/resources.json',
+        '--config',
+        'examples/monitor.yml',
+        '--output',
+        join(directory, 'resource-report.json'),
+        '--markdown-output',
+        join(directory, 'resource-report.md'),
+      ]);
+      expect(
+        await readFile(join(directory, 'resource-report.json'), 'utf8'),
+      ).toContain('"version": 1');
+      expect(
+        await readFile(join(directory, 'resource-report.md'), 'utf8'),
+      ).toContain('# External Resources Monitor');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });
