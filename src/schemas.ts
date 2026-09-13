@@ -6,7 +6,7 @@ export const resourceCollectionSchema = {
     required: ['id', 'url'],
     properties: {
       id: { type: 'string', minLength: 1 },
-      url: { type: 'string', minLength: 1, format: 'uri' },
+      url: { type: 'string', minLength: 1 },
       title: { type: 'string', minLength: 1 },
       profile: { type: 'string', minLength: 1 },
     },
