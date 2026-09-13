@@ -57,12 +57,13 @@ try {
       shouldFail: true,
     };
     await writeReport(report, args);
-    process.exit(1);
+    process.exitCode = 1;
+  } else {
+    process.stderr.write(
+      `${error instanceof Error ? error.message : String(error)}\n`,
+    );
+    process.exitCode = 2;
   }
-  process.stderr.write(
-    `${error instanceof Error ? error.message : String(error)}\n`,
-  );
-  process.exitCode = 2;
 }
 
 async function writeReport(
