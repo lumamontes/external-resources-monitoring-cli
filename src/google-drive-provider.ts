@@ -46,12 +46,14 @@ async function observeDriveResource(
   const parsedUrl = new URL(resource.url);
   const driveFile = extractDriveFile(parsedUrl);
   if (!driveFile) {
+    const malformedFileUrl =
+      parsedUrl.pathname === '/open' ||
+      parsedUrl.pathname === '/file/d' ||
+      parsedUrl.pathname.startsWith('/file/d/');
     return observation(
       resource,
-      parsedUrl.pathname.startsWith('/file/d/')
-        ? 'invalid-input'
-        : 'unsupported',
-      parsedUrl.pathname.startsWith('/file/d/')
+      malformedFileUrl ? 'invalid-input' : 'unsupported',
+      malformedFileUrl
         ? 'resource is a malformed Google Drive file URL'
         : 'resource is not a supported Google Drive file URL',
       now,
@@ -124,7 +126,19 @@ async function observeDriveResource(
       );
     }
 
-    const body = await readBoundedBody(response, maxBytes);
+    const remainingTimeout =
+      context.config.timeoutMs - (Date.now() - startedAt);
+    if (remainingTimeout <= 0) {
+      return observation(
+        resource,
+        'inconclusive',
+        'response body timed out',
+        now,
+        startedAt,
+        baseEvidence,
+      );
+    }
+    const body = await readBoundedBody(response, maxBytes, remainingTimeout);
     if (body === undefined) {
       return observation(
         resource,
@@ -159,21 +173,36 @@ async function observeDriveResource(
 async function readBoundedBody(
   response: Response,
   maxBytes: number,
+  timeoutMs: number,
 ): Promise<Uint8Array | undefined> {
   if (!response.body) return new Uint8Array();
 
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > maxBytes) {
-      await reader.cancel();
-      return undefined;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => {
+      void reader.cancel();
+      reject(new Error(`response body timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+  try {
+    while (true) {
+      const { done, value } = await Promise.race([
+        reader.read(),
+        timeoutPromise,
+      ]);
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        return undefined;
+      }
+      chunks.push(value);
     }
-    chunks.push(value);
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 
   const body = new Uint8Array(total);

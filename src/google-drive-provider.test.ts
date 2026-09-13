@@ -168,6 +168,50 @@ describe('createGoogleDriveProvider', () => {
     expect(observation.outcome).toBe('invalid-input');
   });
 
+  it('records final redirect evidence', async () => {
+    const provider = createGoogleDriveProvider();
+    const response = new Response('%PDF-1.7\nfixture\n%%EOF', {
+      status: 200,
+      headers: { 'content-type': 'application/pdf' },
+    });
+    Object.defineProperty(response, 'url', {
+      value: 'https://cdn.example.test/file.pdf',
+    });
+    Object.defineProperty(response, 'redirected', { value: true });
+
+    const observation = await provider.observe(
+      { id: 'zine-001', url: 'https://drive.google.com/file/d/file-123/view' },
+      { profile, config, providerConfig: {}, network: async () => response },
+    );
+
+    expect(observation.evidence).toMatchObject({
+      responseUrl: 'https://cdn.example.test/file.pdf',
+      redirected: true,
+    });
+  });
+
+  it('classifies a response over the limit as inconclusive', async () => {
+    const provider = createGoogleDriveProvider();
+    const observation = await provider.observe(
+      { id: 'zine-001', url: 'https://drive.google.com/file/d/file-123/view' },
+      {
+        profile: { ...profile, maxBytes: 10 },
+        config,
+        providerConfig: {},
+        network: async () =>
+          new Response(null, {
+            status: 200,
+            headers: { 'content-length': '11' },
+          }),
+      },
+    );
+
+    expect(observation).toMatchObject({
+      outcome: 'inconclusive',
+      reason: 'response exceeds the configured body limit',
+    });
+  });
+
   it('classifies rate limits and timeouts as inconclusive', async () => {
     const provider = createGoogleDriveProvider();
     const resource: Resource = {
