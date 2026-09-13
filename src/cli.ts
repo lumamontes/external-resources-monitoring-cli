@@ -7,6 +7,7 @@ import { parseConfig } from './config.js';
 import { createDeterministicProvider } from './deterministic-provider.js';
 import { createGoogleDriveProvider } from './google-drive-provider.js';
 import { parseResourceInput } from './input.js';
+import { renderMarkdownReport } from './markdown-report.js';
 import { runMonitor } from './run-monitor.js';
 
 const args = parseArguments(process.argv.slice(2));
@@ -36,6 +37,8 @@ try {
 
   if (args.output) await writeFile(args.output, output, 'utf8');
   else process.stdout.write(output);
+  if (args.markdownOutput)
+    await writeFile(args.markdownOutput, renderMarkdownReport(report), 'utf8');
 
   process.exitCode = report.shouldFail ? 1 : 0;
 } catch (error) {
@@ -50,6 +53,7 @@ function parseArguments(values: string[]): {
   format?: 'csv' | 'json';
   config?: string;
   output?: string;
+  markdownOutput?: string;
 } {
   const args: ReturnType<typeof parseArguments> = {};
   for (let index = 0; index < values.length; index += 1) {
@@ -60,6 +64,7 @@ function parseArguments(values: string[]): {
       args.format = next;
     else if (value === '--config' && next) args.config = next;
     else if (value === '--output' && next) args.output = next;
+    else if (value === '--markdown-output' && next) args.markdownOutput = next;
     else if (value?.startsWith('--'))
       throw new Error(`unknown or incomplete argument: ${value}`);
     else continue;

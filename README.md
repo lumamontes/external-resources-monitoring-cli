@@ -22,7 +22,7 @@ npm run build
 node dist/cli.js --input examples/resources.json
 ```
 
-The CLI includes a Google Drive provider and a deterministic provider for the synthetic example. Google Drive checks make anonymous requests and do not use credentials. JSON output is written to standard output unless `--output` is supplied.
+The CLI includes a Google Drive provider and a deterministic provider for the synthetic example. Google Drive checks make anonymous requests and do not use credentials. JSON output is written to standard output unless `--output` is supplied. Pass `--markdown-output report.md` to write an optional maintainer summary alongside the canonical JSON report.
 
 The repository includes one supplied public Drive PDF in `examples/google-drive.json`. To check another public Google Drive file without credentials, copy that file and replace its URL with a file shared for anonymous viewing/downloading, then run:
 
@@ -53,6 +53,12 @@ service. Each run is limited by configured concurrency, request timeouts, retry
 counts, response-body limits, and the finite input collection. It emits one
 deterministic JSON report after attempting every resource; `failOn` controls which
 confirmed outcomes produce a failing process exit code.
+
+The copyable workflow is `.github/workflows/resource-monitor.yml`. It supports
+scheduled and manual runs, uploads JSON and Markdown artifacts even when checks
+fail, and uses the CLI exit code for workflow failure notifications. Artifact
+retention follows the repository's GitHub Actions settings. Durable cross-run
+state and signed transition webhooks are deferred to a later milestone.
 
 ## Scope
 
