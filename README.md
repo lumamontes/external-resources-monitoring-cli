@@ -46,6 +46,14 @@ CSV and JSON collections contain `id` and `url`, with optional `title` and `prof
 
 Configuration is YAML and is schema-validated. When omitted, safe defaults and the `publication` PDF validation profile are used. The monitor policy and named validation profiles are designed to be shared by future providers without duplicating content validation rules.
 
+## Operational Envelope
+
+This is a bounded batch monitor, not an unbounded crawler or high-volume scanning
+service. Each run is limited by configured concurrency, request timeouts, retry
+counts, response-body limits, and the finite input collection. It emits one
+deterministic JSON report after attempting every resource; `failOn` controls which
+confirmed outcomes produce a failing process exit code.
+
 ## Scope
 
 The first milestone is a stateless, bounded batch monitor. It does not store credentials, make authenticated checks, crawl sites, or change publication decisions. Google Drive anonymous PDF checking, Markdown reports, GitHub Actions scheduling, durable history, and signed transition webhooks are subsequent milestones.

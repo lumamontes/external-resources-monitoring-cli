@@ -187,4 +187,71 @@ describe('runMonitor', () => {
 
     expect(maximumActive).toBe(2);
   });
+
+  it('completes the full batch and preserves input order', async () => {
+    const provider: Provider = {
+      name: 'deterministic',
+      recognize: (url) => url.hostname === 'example.test',
+      observe: async (observedResource) => {
+        await new Promise((resolve) =>
+          setTimeout(resolve, observedResource.id === 'slow' ? 10 : 1),
+        );
+        if (observedResource.id === 'broken')
+          throw new Error('temporary failure');
+        return {
+          resourceId: observedResource.id,
+          provider: 'deterministic',
+          accessPerspective: 'anonymous-reader',
+          outcome: 'available',
+          reason: 'expected content retrieved',
+          observedAt: '2026-09-12T00:00:00.000Z',
+          durationMs: 3,
+          evidence: {},
+        };
+      },
+    };
+
+    const report = await runMonitor({
+      resources: [
+        { ...resource, id: 'slow' },
+        { ...resource, id: 'unsupported', url: 'https://other.test/file.pdf' },
+        { ...resource, id: 'broken' },
+      ],
+      config: { ...config, monitor: { ...config.monitor, concurrency: 3 } },
+      providers: [provider],
+    });
+
+    expect(report.results.map(({ resourceId }) => resourceId)).toEqual([
+      'slow',
+      'unsupported',
+      'broken',
+    ]);
+    expect(report.results.map(({ outcome }) => outcome)).toEqual([
+      'available',
+      'unsupported',
+      'inconclusive',
+    ]);
+  });
+
+  it('applies configurable exit failure categories', async () => {
+    const provider: Provider = {
+      name: 'deterministic',
+      recognize: () => false,
+      observe: async () => {
+        throw new Error('should not observe');
+      },
+    };
+
+    const report = await runMonitor({
+      resources: [resource],
+      config: {
+        ...config,
+        monitor: { ...config.monitor, failOn: ['unsupported'] },
+      },
+      providers: [provider],
+    });
+
+    expect(report.results[0]?.outcome).toBe('unsupported');
+    expect(report.shouldFail).toBe(true);
+  });
 });
