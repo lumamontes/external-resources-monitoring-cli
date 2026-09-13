@@ -61,6 +61,7 @@ describe('runMonitor', () => {
     expect(report.results).toEqual([
       expect.objectContaining({
         resourceId: 'zine-001',
+        title: 'A publication',
         outcome: 'available',
         accessPerspective: 'anonymous-reader',
       }),
@@ -125,6 +126,30 @@ describe('runMonitor', () => {
       reason: 'provider check failed: fixture transport failed',
     });
     expect(report.shouldFail).toBe(false);
+  });
+
+  it('classifies a provider recognition failure as inconclusive', async () => {
+    const provider: Provider = {
+      name: 'broken-recognizer',
+      recognize: () => {
+        throw new Error('fixture recognizer failed');
+      },
+      observe: async () => {
+        throw new Error('should not observe');
+      },
+    };
+
+    const report = await runMonitor({
+      resources: [resource],
+      config,
+      providers: [provider],
+    });
+
+    expect(report.results[0]).toMatchObject({
+      provider: 'broken-recognizer',
+      outcome: 'inconclusive',
+      reason: 'provider recognition failed',
+    });
   });
 
   it('limits concurrent provider observations', async () => {

@@ -41,6 +41,7 @@ export interface MonitorConfig {
 
 export interface Observation {
   resourceId: string;
+  title?: string;
   provider: string;
   accessPerspective: AccessPerspective;
   outcome: Outcome;

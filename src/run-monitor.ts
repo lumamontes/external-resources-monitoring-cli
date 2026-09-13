@@ -52,11 +52,32 @@ export async function runMonitor({
       );
     }
 
-    const provider = providers.find((candidate) =>
-      candidate.recognize(parsedUrl),
-    );
+    let provider: Provider | undefined;
+    let recognitionFailure: Provider | undefined;
+    for (const candidate of providers) {
+      try {
+        if (candidate.recognize(parsedUrl)) {
+          provider = candidate;
+          break;
+        }
+      } catch {
+        recognitionFailure ??= candidate;
+      }
+    }
+    if (!provider && recognitionFailure) {
+      return withResourceTitle(resource, {
+        resourceId: resource.id,
+        provider: recognitionFailure.name,
+        accessPerspective: 'anonymous-reader',
+        outcome: 'inconclusive',
+        reason: 'provider recognition failed',
+        observedAt,
+        durationMs: 0,
+        evidence: {},
+      });
+    }
     if (!provider) {
-      return {
+      return withResourceTitle(resource, {
         resourceId: resource.id,
         provider: 'none',
         accessPerspective: 'anonymous-reader',
@@ -65,18 +86,21 @@ export async function runMonitor({
         observedAt,
         durationMs: 0,
         evidence: { url: resource.url },
-      };
+      });
     }
 
     try {
-      return await provider.observe(resource, {
-        profile,
-        config: config.monitor,
-        providerConfig: config.providers[provider.name] ?? {},
-        network,
-      });
+      return withResourceTitle(
+        resource,
+        await provider.observe(resource, {
+          profile,
+          config: config.monitor,
+          providerConfig: config.providers[provider.name] ?? {},
+          network,
+        }),
+      );
     } catch (error) {
-      return {
+      return withResourceTitle(resource, {
         resourceId: resource.id,
         provider: provider.name,
         accessPerspective: 'anonymous-reader',
@@ -85,12 +109,12 @@ export async function runMonitor({
         observedAt,
         durationMs: 0,
         evidence: {},
-      };
+      });
     }
   }
 
   function invalidObservation(resource: Resource, reason: string): Observation {
-    return {
+    return withResourceTitle(resource, {
       resourceId: resource.id,
       provider: 'none',
       accessPerspective: 'anonymous-reader',
@@ -99,7 +123,16 @@ export async function runMonitor({
       observedAt,
       durationMs: 0,
       evidence: { url: resource.url },
-    };
+    });
+  }
+
+  function withResourceTitle(
+    resource: Resource,
+    observation: Observation,
+  ): Observation {
+    return resource.title === undefined
+      ? observation
+      : { ...observation, title: resource.title };
   }
 
   async function observeResources(): Promise<Observation[]> {
