@@ -13,7 +13,7 @@ export function createGoogleDriveProvider(
 ): Provider {
   return {
     name: 'google-drive',
-    recognize: (url) => extractDriveFile(url) !== undefined,
+    recognize: (url) => url.hostname.toLowerCase() === driveHost,
     observe: async (resource, context) =>
       observeDriveResource(resource, context, now),
   };
@@ -48,8 +48,12 @@ async function observeDriveResource(
   if (!driveFile) {
     return observation(
       resource,
-      'invalid-input',
-      'resource is not a supported Google Drive file URL',
+      parsedUrl.pathname.startsWith('/file/d/')
+        ? 'invalid-input'
+        : 'unsupported',
+      parsedUrl.pathname.startsWith('/file/d/')
+        ? 'resource is a malformed Google Drive file URL'
+        : 'resource is not a supported Google Drive file URL',
       now,
       startedAt,
     );

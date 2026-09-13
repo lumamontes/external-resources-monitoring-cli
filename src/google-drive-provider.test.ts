@@ -19,7 +19,7 @@ const config: MonitorPolicy = {
 };
 
 describe('createGoogleDriveProvider', () => {
-  it('recognizes common file URLs and excludes folders', () => {
+  it('recognizes Drive URLs for explicit classification', () => {
     const provider = createGoogleDriveProvider();
 
     expect(
@@ -34,7 +34,25 @@ describe('createGoogleDriveProvider', () => {
       provider.recognize(
         new URL('https://drive.google.com/drive/folders/folder-123'),
       ),
-    ).toBe(false);
+    ).toBe(true);
+  });
+
+  it('classifies Drive folder URLs as unsupported', async () => {
+    const provider = createGoogleDriveProvider();
+    const observation = await provider.observe(
+      {
+        id: 'folder-001',
+        url: 'https://drive.google.com/drive/folders/folder-123',
+      },
+      {
+        profile,
+        config,
+        providerConfig: {},
+        network: async () => new Response(),
+      },
+    );
+
+    expect(observation.outcome).toBe('unsupported');
   });
 
   it('retrieves a PDF anonymously and preserves a resource key', async () => {
@@ -111,6 +129,43 @@ describe('createGoogleDriveProvider', () => {
       outcome: 'inaccessible',
       reason: 'retrieved PDF appears incomplete',
     });
+  });
+
+  it('rejects a mismatched content type even when the body has a PDF signature', async () => {
+    const provider = createGoogleDriveProvider();
+    const observation = await provider.observe(
+      { id: 'zine-001', url: 'https://drive.google.com/file/d/file-123/view' },
+      {
+        profile,
+        config,
+        providerConfig: {},
+        network: async () =>
+          new Response('%PDF-1.7\nfixture\n%%EOF', {
+            status: 200,
+            headers: { 'content-type': 'application/octet-stream' },
+          }),
+      },
+    );
+
+    expect(observation).toMatchObject({
+      outcome: 'inaccessible',
+      reason: 'retrieved content type does not match the validation profile',
+    });
+  });
+
+  it('classifies malformed Drive file paths as invalid input', async () => {
+    const provider = createGoogleDriveProvider();
+    const observation = await provider.observe(
+      { id: 'zine-001', url: 'https://drive.google.com/file/d//view' },
+      {
+        profile,
+        config,
+        providerConfig: {},
+        network: async () => new Response(),
+      },
+    );
+
+    expect(observation.outcome).toBe('invalid-input');
   });
 
   it('classifies rate limits and timeouts as inconclusive', async () => {

@@ -13,8 +13,7 @@ export function validateContent(
 ): ContentValidationResult {
   const hasExpectedType =
     contentType === undefined ||
-    profile.expectedContentTypes.includes(contentType) ||
-    contentType === 'application/octet-stream';
+    profile.expectedContentTypes.includes(contentType);
   const hasPdfSignature = startsWithPdfSignature(body);
   const hasPdfEndMarker = endsWithPdfMarker(body);
   const evidence = {
