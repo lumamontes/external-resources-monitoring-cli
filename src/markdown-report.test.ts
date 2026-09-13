@@ -17,7 +17,7 @@ const report: RunReport = {
       reason: 'anonymous retrieval returned HTTP 403',
       observedAt: '2026-09-12T00:00:00.000Z',
       durationMs: 12,
-      evidence: {},
+      evidence: { url: 'not a url' },
     },
     {
       resourceId: 'unknown-1',
@@ -73,6 +73,7 @@ describe('renderMarkdownReport', () => {
     expect(markdown).toContain('| invalid-input | 1 |');
     expect(markdown).toContain('Missing PDF');
     expect(markdown).toContain('anonymous retrieval returned HTTP 403');
+    expect(markdown).toContain('URL: `not a url`');
     expect(markdown).toContain('does not mean a resource was deleted');
     expect(markdown).toContain('does not mean the resource is broken');
     for (const resourceId of [

@@ -49,7 +49,11 @@ function formatObservation(observation: Observation): string {
   const identity = observation.title
     ? `**${escapeMarkdown(observation.title)}** (${observation.resourceId})`
     : `**${observation.resourceId}**`;
-  return `- ${identity}: ${escapeMarkdown(observation.reason)} [${observation.provider}, ${observation.accessPerspective}, ${observation.durationMs} ms]`;
+  const url =
+    typeof observation.evidence.url === 'string'
+      ? ` URL: \`${escapeMarkdown(observation.evidence.url)}\``
+      : '';
+  return `- ${identity}: ${escapeMarkdown(observation.reason)}${url} [${observation.provider}, ${observation.accessPerspective}, ${observation.durationMs} ms]`;
 }
 
 function escapeMarkdown(value: string): string {
