@@ -93,13 +93,11 @@ async function observeDriveResource(
       responseUrl: sanitizeResponseUrl(response.url),
       redirected: response.redirected,
     };
-    const declaredLength = Number(response.headers.get('content-length'));
+    const contentLength = response.headers.get('content-length');
+    const declaredLength =
+      contentLength === null ? undefined : Number(contentLength);
 
-    if (
-      response.status === 408 ||
-      response.status === 429 ||
-      response.status >= 500
-    ) {
+    if (isTransientStatus(response.status)) {
       return observation(
         resource,
         'inconclusive',
@@ -119,7 +117,11 @@ async function observeDriveResource(
         baseEvidence,
       );
     }
-    if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    if (
+      declaredLength !== undefined &&
+      Number.isFinite(declaredLength) &&
+      declaredLength > maxBytes
+    ) {
       return observation(
         resource,
         'inconclusive',
@@ -151,6 +153,24 @@ async function observeDriveResource(
         now,
         startedAt,
         { ...baseEvidence, maxBytes },
+      );
+    }
+    if (
+      declaredLength !== undefined &&
+      Number.isFinite(declaredLength) &&
+      body.byteLength !== declaredLength
+    ) {
+      return observation(
+        resource,
+        'inconclusive',
+        'response body is shorter than its declared content length',
+        now,
+        startedAt,
+        {
+          ...baseEvidence,
+          bytesRead: body.byteLength,
+          contentLength: declaredLength,
+        },
       );
     }
 

@@ -134,6 +134,31 @@ describe('createGoogleDriveProvider', () => {
     });
   });
 
+  it('does not treat a response shorter than its content length as available', async () => {
+    const provider = createGoogleDriveProvider();
+    const observation = await provider.observe(
+      { id: 'zine-001', url: 'https://drive.google.com/file/d/file-123/view' },
+      {
+        profile,
+        config,
+        providerConfig: {},
+        network: async () =>
+          new Response('%PDF-1.7\nfixture\n%%EOF', {
+            status: 200,
+            headers: {
+              'content-type': 'application/pdf',
+              'content-length': '999',
+            },
+          }),
+      },
+    );
+
+    expect(observation).toMatchObject({
+      outcome: 'inconclusive',
+      reason: 'response body is shorter than its declared content length',
+    });
+  });
+
   it('accepts Drive binary content when the body has a PDF signature', async () => {
     const provider = createGoogleDriveProvider();
     const observation = await provider.observe(
