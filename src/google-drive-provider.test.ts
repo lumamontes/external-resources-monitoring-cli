@@ -31,6 +31,9 @@ describe('createGoogleDriveProvider', () => {
       provider.recognize(new URL('https://drive.google.com/open?id=file-123')),
     ).toBe(true);
     expect(
+      provider.recognize(new URL('https://drive.google.com/uc?id=file-123')),
+    ).toBe(true);
+    expect(
       provider.recognize(
         new URL('https://drive.google.com/drive/folders/folder-123'),
       ),
@@ -236,5 +239,35 @@ describe('createGoogleDriveProvider', () => {
 
     expect(rateLimited.outcome).toBe('inconclusive');
     expect(timedOut.outcome).toBe('inconclusive');
+  });
+
+  it('classifies permission denial and network failures separately', async () => {
+    const provider = createGoogleDriveProvider();
+    const resource: Resource = {
+      id: 'zine-001',
+      url: 'https://drive.google.com/file/d/file-123/view',
+    };
+
+    const denied = await provider.observe(resource, {
+      profile,
+      config,
+      providerConfig: {},
+      network: async () =>
+        new Response('<html>Request access</html>', { status: 403 }),
+    });
+    const failed = await provider.observe(resource, {
+      profile,
+      config,
+      providerConfig: {},
+      network: async () => {
+        throw new Error('connection refused');
+      },
+    });
+
+    expect(denied.outcome).toBe('inaccessible');
+    expect(failed).toMatchObject({
+      outcome: 'inconclusive',
+      reason: 'anonymous retrieval failed: connection refused',
+    });
   });
 });

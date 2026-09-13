@@ -27,7 +27,9 @@ function extractDriveFile(
   const fileMatch = url.pathname.match(/^\/file\/d\/([^/]+)/);
   const id =
     fileMatch?.[1] ??
-    (url.pathname === '/open' ? url.searchParams.get('id') : null);
+    (url.pathname === '/open' || url.pathname === '/uc'
+      ? url.searchParams.get('id')
+      : null);
   if (!id) return undefined;
 
   const resourceKey =
@@ -48,6 +50,7 @@ async function observeDriveResource(
   if (!driveFile) {
     const malformedFileUrl =
       parsedUrl.pathname === '/open' ||
+      parsedUrl.pathname === '/uc' ||
       parsedUrl.pathname === '/file/d' ||
       parsedUrl.pathname.startsWith('/file/d/');
     return observation(
