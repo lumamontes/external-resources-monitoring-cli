@@ -136,4 +136,30 @@ describe('resource-monitor CLI', () => {
       await rm(directory, { recursive: true, force: true });
     }
   });
+
+  it('writes an invalid-input report when input validation fails', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'resource-invalid-'));
+    const inputPath = join(directory, 'resources.json');
+    const outputPath = join(directory, 'report.json');
+    try {
+      await writeFile(inputPath, JSON.stringify([{ id: 'missing-url' }]));
+      await expect(
+        execFileAsync(process.execPath, [
+          'dist/cli.js',
+          '--input',
+          inputPath,
+          '--output',
+          outputPath,
+        ]),
+      ).rejects.toMatchObject({ code: 1 });
+      const output = JSON.parse(await readFile(outputPath, 'utf8')) as {
+        results: Array<{ outcome: string }>;
+      };
+      expect(output.results).toEqual([
+        expect.objectContaining({ outcome: 'invalid-input' }),
+      ]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
 });

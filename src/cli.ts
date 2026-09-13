@@ -6,7 +6,7 @@ import { basename } from 'node:path';
 import { parseConfig } from './config.js';
 import { createDeterministicProvider } from './deterministic-provider.js';
 import { createGoogleDriveProvider } from './google-drive-provider.js';
-import { parseResourceInput } from './input.js';
+import { InputValidationError, parseResourceInput } from './input.js';
 import { renderMarkdownReport } from './markdown-report.js';
 import { runMonitor } from './run-monitor.js';
 
@@ -42,6 +42,35 @@ try {
 
   process.exitCode = report.shouldFail ? 1 : 0;
 } catch (error) {
+  if (error instanceof InputValidationError) {
+    const report = {
+      version: 1 as const,
+      observedAt: new Date().toISOString(),
+      results: [
+        {
+          resourceId: 'input',
+          provider: 'none',
+          accessPerspective: 'anonymous-reader' as const,
+          outcome: 'invalid-input' as const,
+          reason: error.message,
+          observedAt: new Date().toISOString(),
+          durationMs: 0,
+          evidence: {},
+        },
+      ],
+      shouldFail: true,
+    };
+    const output = `${JSON.stringify(report, null, 2)}\n`;
+    if (args.output) await writeFile(args.output, output, 'utf8');
+    else process.stdout.write(output);
+    if (args.markdownOutput)
+      await writeFile(
+        args.markdownOutput,
+        renderMarkdownReport(report),
+        'utf8',
+      );
+    process.exit(1);
+  }
   process.stderr.write(
     `${error instanceof Error ? error.message : String(error)}\n`,
   );
