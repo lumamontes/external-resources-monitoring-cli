@@ -27,4 +27,16 @@ describe('parseResourceInput', () => {
       ),
     ).toThrow(/id/);
   });
+
+  it('rejects duplicate resource IDs', () => {
+    expect(() =>
+      parseResourceInput(
+        JSON.stringify([
+          { id: 'zine-001', url: 'https://example.test/a.pdf' },
+          { id: 'zine-001', url: 'https://example.test/b.pdf' },
+        ]),
+        'json',
+      ),
+    ).toThrow(/duplicate resource ID/);
+  });
 });

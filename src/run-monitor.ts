@@ -4,6 +4,7 @@ import type {
   Provider,
   Resource,
   RunReport,
+  NetworkTransport,
 } from './types.js';
 
 interface RunMonitorOptions {
@@ -11,6 +12,7 @@ interface RunMonitorOptions {
   config: MonitorConfig;
   providers: Provider[];
   now?: () => Date;
+  network?: NetworkTransport;
 }
 
 export async function runMonitor({
@@ -18,6 +20,7 @@ export async function runMonitor({
   config,
   providers,
   now = () => new Date(),
+  network = globalThis.fetch,
 }: RunMonitorOptions): Promise<RunReport> {
   const observedAt = now().toISOString();
   const results = await observeResources();
@@ -65,7 +68,12 @@ export async function runMonitor({
       );
     }
 
-    return provider.observe(resource, { profile, config: config.monitor });
+    return provider.observe(resource, {
+      profile,
+      config: config.monitor,
+      providerConfig: config.providers[provider.name] ?? {},
+      network,
+    });
   }
 
   function invalidObservation(resource: Resource, reason: string): Observation {

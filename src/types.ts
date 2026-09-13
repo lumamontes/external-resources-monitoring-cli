@@ -52,7 +52,14 @@ export interface Observation {
 export interface ProviderContext {
   profile: ValidationProfile;
   config: MonitorPolicy;
+  providerConfig: Record<string, unknown>;
+  network: NetworkTransport;
 }
+
+export type NetworkTransport = (
+  url: URL,
+  init?: RequestInit,
+) => Promise<Response>;
 
 export interface Provider {
   name: string;

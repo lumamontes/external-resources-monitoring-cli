@@ -31,6 +31,8 @@ describe('createDeterministicProvider', () => {
         maxBytes: 1024,
         failOn: ['inaccessible', 'invalid-input'],
       },
+      providerConfig: {},
+      network: async (_url: URL) => new Response(),
     });
 
     expect(observation).toMatchObject({

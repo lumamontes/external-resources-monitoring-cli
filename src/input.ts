@@ -51,7 +51,18 @@ export function parseResourceInput(
     );
   }
 
-  return normalized as Resource[];
+  const resources = normalized as Resource[];
+  const seenIds = new Set<string>();
+  for (const [index, resource] of resources.entries()) {
+    if (seenIds.has(resource.id)) {
+      throw new InputValidationError(
+        `/${index}/id duplicate resource ID: ${resource.id}`,
+      );
+    }
+    seenIds.add(resource.id);
+  }
+
+  return resources;
 }
 
 function normalizeRecords(value: unknown): unknown {

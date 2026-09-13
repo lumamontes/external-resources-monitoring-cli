@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { runMonitor } from './run-monitor.js';
-import type { MonitorConfig, Provider, Resource } from './types.js';
+import type {
+  MonitorConfig,
+  NetworkTransport,
+  Provider,
+  Resource,
+} from './types.js';
 
 const config: MonitorConfig = {
   version: 1,
@@ -60,6 +65,40 @@ describe('runMonitor', () => {
       }),
     ]);
     expect(report.shouldFail).toBe(false);
+  });
+
+  it('passes provider configuration and network transport through the seam', async () => {
+    const network = async () => new Response();
+    let receivedConfig: Record<string, unknown> | undefined;
+    let receivedNetwork: NetworkTransport | undefined;
+    const provider: Provider = {
+      name: 'deterministic',
+      recognize: () => true,
+      observe: async (observedResource, context) => {
+        receivedConfig = context.providerConfig;
+        receivedNetwork = context.network;
+        return {
+          resourceId: observedResource.id,
+          provider: 'deterministic',
+          accessPerspective: 'anonymous-reader',
+          outcome: 'available',
+          reason: 'expected content retrieved',
+          observedAt: '2026-09-12T00:00:00.000Z',
+          durationMs: 3,
+          evidence: {},
+        };
+      },
+    };
+
+    await runMonitor({
+      resources: [resource],
+      config: { ...config, providers: { deterministic: { mode: 'fixture' } } },
+      providers: [provider],
+      network,
+    });
+
+    expect(receivedConfig).toEqual({ mode: 'fixture' });
+    expect(receivedNetwork).toBe(network);
   });
 
   it('limits concurrent provider observations', async () => {
