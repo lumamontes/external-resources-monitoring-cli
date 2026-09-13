@@ -1,3 +1,4 @@
+import { validateContent } from './content-validation.js';
 import type {
   Observation,
   Provider,
@@ -57,12 +58,14 @@ async function observeDriveResource(
   const downloadUrl = new URL('https://drive.google.com/uc');
   downloadUrl.searchParams.set('export', 'download');
   downloadUrl.searchParams.set('id', driveFile.id);
-  if (driveFile.resourceKey)
+  if (driveFile.resourceKey) {
     downloadUrl.searchParams.set('resourcekey', driveFile.resourceKey);
+  }
 
   try {
-    const response = await withTimeout(
-      context.network(downloadUrl, { redirect: 'follow' }),
+    const response = await requestWithTimeout(
+      context.network,
+      downloadUrl,
       context.config.timeoutMs,
     );
     const contentType = response.headers
@@ -74,6 +77,12 @@ async function observeDriveResource(
       context.config.maxBytes,
       context.profile.maxBytes,
     );
+    const baseEvidence = {
+      httpStatus: response.status,
+      contentType,
+      responseUrl: response.url || undefined,
+      redirected: response.redirected,
+    };
     const declaredLength = Number(response.headers.get('content-length'));
 
     if (
@@ -87,10 +96,7 @@ async function observeDriveResource(
         `provider returned HTTP ${response.status}`,
         now,
         startedAt,
-        {
-          httpStatus: response.status,
-          contentType,
-        },
+        baseEvidence,
       );
     }
     if (!response.ok) {
@@ -100,10 +106,7 @@ async function observeDriveResource(
         `anonymous retrieval returned HTTP ${response.status}`,
         now,
         startedAt,
-        {
-          httpStatus: response.status,
-          contentType,
-        },
+        baseEvidence,
       );
     }
     if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
@@ -113,10 +116,7 @@ async function observeDriveResource(
         'response exceeds the configured body limit',
         now,
         startedAt,
-        {
-          contentLength: declaredLength,
-          maxBytes,
-        },
+        { ...baseEvidence, contentLength: declaredLength, maxBytes },
       );
     }
 
@@ -128,46 +128,18 @@ async function observeDriveResource(
         'response exceeds the configured body limit',
         now,
         startedAt,
-        { maxBytes },
+        { ...baseEvidence, maxBytes },
       );
     }
 
-    const isExpectedType =
-      contentType === undefined ||
-      context.profile.expectedContentTypes.includes(contentType) ||
-      contentType === 'application/octet-stream';
-    const hasPdfSignature = startsWithPdfSignature(body);
-    if (
-      !isExpectedType ||
-      (context.profile.validatePdfSignature && !hasPdfSignature)
-    ) {
-      return observation(
-        resource,
-        'inaccessible',
-        'retrieved content is not a valid PDF',
-        now,
-        startedAt,
-        {
-          httpStatus: response.status,
-          contentType,
-          hasPdfSignature,
-          bytesRead: body.byteLength,
-        },
-      );
-    }
-
+    const validation = validateContent(body, contentType, context.profile);
     return observation(
       resource,
-      'available',
-      'anonymous PDF content retrieved',
+      validation.valid ? 'available' : 'inaccessible',
+      validation.valid ? 'anonymous PDF content retrieved' : validation.reason,
       now,
       startedAt,
-      {
-        httpStatus: response.status,
-        contentType,
-        hasPdfSignature,
-        bytesRead: body.byteLength,
-      },
+      { ...baseEvidence, ...validation.evidence },
     );
   } catch (error) {
     return observation(
@@ -209,17 +181,6 @@ async function readBoundedBody(
   return body;
 }
 
-function startsWithPdfSignature(body: Uint8Array): boolean {
-  return (
-    body.byteLength >= 5 &&
-    body[0] === 0x25 &&
-    body[1] === 0x50 &&
-    body[2] === 0x44 &&
-    body[3] === 0x46 &&
-    body[4] === 0x2d
-  );
-}
-
 function observation(
   resource: Resource,
   outcome: Observation['outcome'],
@@ -240,19 +201,24 @@ function observation(
   };
 }
 
-async function withTimeout<T>(
-  promise: Promise<T>,
+async function requestWithTimeout(
+  network: ProviderContext['network'],
+  url: URL,
   timeoutMs: number,
-): Promise<T> {
+): Promise<Response> {
+  const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
-    timeout = setTimeout(
-      () => reject(new Error(`request timed out after ${timeoutMs}ms`)),
-      timeoutMs,
-    );
+    timeout = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`request timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
   });
   try {
-    return await Promise.race([promise, timeoutPromise]);
+    return await Promise.race([
+      network(url, { redirect: 'follow', signal: controller.signal }),
+      timeoutPromise,
+    ]);
   } finally {
     if (timeout) clearTimeout(timeout);
   }

@@ -53,7 +53,7 @@ describe('createGoogleDriveProvider', () => {
       providerConfig: {},
       network: async (url) => {
         requestedUrl = url;
-        return new Response('%PDF-1.7\nfixture', {
+        return new Response('%PDF-1.7\nfixture\n%%EOF', {
           status: 200,
           headers: { 'content-type': 'application/pdf' },
         });
@@ -89,6 +89,28 @@ describe('createGoogleDriveProvider', () => {
 
     expect(observation.outcome).toBe('inaccessible');
     expect(observation.reason).toMatch(/PDF/);
+  });
+
+  it('does not treat a truncated PDF body as available', async () => {
+    const provider = createGoogleDriveProvider();
+    const observation = await provider.observe(
+      { id: 'zine-001', url: 'https://drive.google.com/file/d/file-123/view' },
+      {
+        profile,
+        config,
+        providerConfig: {},
+        network: async () =>
+          new Response('%PDF-1.7\ntruncated', {
+            status: 200,
+            headers: { 'content-type': 'application/pdf' },
+          }),
+      },
+    );
+
+    expect(observation).toMatchObject({
+      outcome: 'inaccessible',
+      reason: 'retrieved PDF appears incomplete',
+    });
   });
 
   it('classifies rate limits and timeouts as inconclusive', async () => {

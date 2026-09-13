@@ -24,6 +24,12 @@ node dist/cli.js --input examples/resources.json
 
 The CLI includes a Google Drive provider and a deterministic provider for the synthetic example. Google Drive checks make anonymous requests and do not use credentials. JSON output is written to standard output unless `--output` is supplied.
 
+To check a public Google Drive file without credentials, copy `examples/google-drive.json`, replace its placeholder file ID with a file shared for anonymous viewing/downloading, and run:
+
+```sh
+node dist/cli.js --input google-drive.json
+```
+
 To check a public Google Drive file without credentials, provide a collection containing a supported file-sharing URL:
 
 ```sh
