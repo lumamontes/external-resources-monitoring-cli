@@ -18,6 +18,7 @@ export const configSchema = {
   $id: 'https://external-resources-monitoring-cli.dev/schemas/config-v1.json',
   type: 'object',
   additionalProperties: false,
+  required: ['version'],
   properties: {
     version: { const: 1 },
     monitor: {

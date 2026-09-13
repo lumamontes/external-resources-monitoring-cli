@@ -20,9 +20,7 @@ export async function runMonitor({
   now = () => new Date(),
 }: RunMonitorOptions): Promise<RunReport> {
   const observedAt = now().toISOString();
-  const results = await Promise.all(
-    resources.map((resource) => observeResource(resource)),
-  );
+  const results = await observeResources();
 
   return {
     version: 1,
@@ -81,5 +79,23 @@ export async function runMonitor({
       durationMs: 0,
       evidence: { url: resource.url },
     };
+  }
+
+  async function observeResources(): Promise<Observation[]> {
+    const results: Observation[] = new Array(resources.length);
+    let nextIndex = 0;
+    const workerCount = Math.min(config.monitor.concurrency, resources.length);
+
+    await Promise.all(
+      Array.from({ length: workerCount }, async () => {
+        while (nextIndex < resources.length) {
+          const index = nextIndex;
+          nextIndex += 1;
+          results[index] = await observeResource(resources[index]!);
+        }
+      }),
+    );
+
+    return results;
   }
 }

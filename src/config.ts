@@ -1,8 +1,9 @@
-import { Ajv, type ErrorObject } from 'ajv';
+import { Ajv } from 'ajv';
 import { parse as parseYaml } from 'yaml';
 
 import { configSchema } from './schemas.js';
-import type { MonitorConfig, Outcome } from './types.js';
+import type { MonitorConfig } from './types.js';
+import { errorMessage, formatValidationErrors } from './validation-errors.js';
 
 const validator = new Ajv({ allErrors: true, strict: true });
 const validateConfig = validator.compile(configSchema);
@@ -39,7 +40,7 @@ export function parseConfig(text?: string): MonitorConfig {
   }
 
   if (!validateConfig(value))
-    throw new Error(formatErrors(validateConfig.errors));
+    throw new Error(formatValidationErrors(validateConfig.errors));
 
   const input = value as Partial<MonitorConfig>;
   return {
@@ -49,21 +50,3 @@ export function parseConfig(text?: string): MonitorConfig {
     providers: input.providers ?? defaultConfig.providers,
   };
 }
-
-function formatErrors(errors: ErrorObject[] | null | undefined): string {
-  return (errors ?? [])
-    .map((error) => {
-      const property =
-        typeof error.params?.additionalProperty === 'string'
-          ? ` (${error.params.additionalProperty})`
-          : '';
-      return `${error.instancePath || '/'} ${error.message ?? 'is invalid'}${property}`;
-    })
-    .join('; ');
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-export type ConfiguredOutcome = Outcome;

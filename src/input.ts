@@ -1,8 +1,9 @@
 import { parse } from 'csv-parse/sync';
-import { Ajv, type ErrorObject } from 'ajv';
+import { Ajv } from 'ajv';
 
 import { resourceCollectionSchema } from './schemas.js';
 import type { Resource } from './types.js';
+import { errorMessage, formatValidationErrors } from './validation-errors.js';
 
 type InputFormat = 'csv' | 'json';
 
@@ -45,7 +46,9 @@ export function parseResourceInput(
 
   const normalized = normalizeRecords(value);
   if (!validateResources(normalized)) {
-    throw new InputValidationError(formatErrors(validateResources.errors));
+    throw new InputValidationError(
+      formatValidationErrors(validateResources.errors),
+    );
   }
 
   return normalized as Resource[];
@@ -67,20 +70,4 @@ function normalizeRecords(value: unknown): unknown {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function formatErrors(errors: ErrorObject[] | null | undefined): string {
-  return (errors ?? [])
-    .map((error) => {
-      const property =
-        typeof error.params?.additionalProperty === 'string'
-          ? ` (${error.params.additionalProperty})`
-          : '';
-      return `${error.instancePath || '/'} ${error.message ?? 'is invalid'}${property}`;
-    })
-    .join('; ');
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
