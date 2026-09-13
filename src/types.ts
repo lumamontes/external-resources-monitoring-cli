@@ -24,6 +24,7 @@ export interface ValidationProfile {
 }
 
 export interface MonitorPolicy {
+  defaultProfile: string;
   concurrency: number;
   timeoutMs: number;
   retries: number;

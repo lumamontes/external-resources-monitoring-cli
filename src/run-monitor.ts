@@ -42,13 +42,13 @@ export async function runMonitor({
       return invalidObservation(resource, 'resource URL is malformed');
     }
 
-    const profileName = resource.profile ?? Object.keys(config.profiles)[0];
+    const profileName = resource.profile ?? config.monitor.defaultProfile;
     const profile =
       profileName === undefined ? undefined : config.profiles[profileName];
     if (!profile) {
       return invalidObservation(
         resource,
-        `validation profile not found: ${profileName ?? 'none'}`,
+        `validation profile not found: ${profileName}`,
       );
     }
 
@@ -68,12 +68,25 @@ export async function runMonitor({
       };
     }
 
-    return provider.observe(resource, {
-      profile,
-      config: config.monitor,
-      providerConfig: config.providers[provider.name] ?? {},
-      network,
-    });
+    try {
+      return await provider.observe(resource, {
+        profile,
+        config: config.monitor,
+        providerConfig: config.providers[provider.name] ?? {},
+        network,
+      });
+    } catch (error) {
+      return {
+        resourceId: resource.id,
+        provider: provider.name,
+        accessPerspective: 'anonymous-reader',
+        outcome: 'inconclusive',
+        reason: `provider check failed: ${error instanceof Error ? error.message : String(error)}`,
+        observedAt,
+        durationMs: 0,
+        evidence: {},
+      };
+    }
   }
 
   function invalidObservation(resource: Resource, reason: string): Observation {

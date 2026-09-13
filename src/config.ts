@@ -11,6 +11,7 @@ const validateConfig = validator.compile(configSchema);
 const defaultConfig: MonitorConfig = {
   version: 1,
   monitor: {
+    defaultProfile: 'publication',
     concurrency: 4,
     timeoutMs: 15000,
     retries: 1,
@@ -43,10 +44,16 @@ export function parseConfig(text?: string): MonitorConfig {
     throw new Error(formatValidationErrors(validateConfig.errors));
 
   const input = value as Partial<MonitorConfig>;
-  return {
+  const config: MonitorConfig = {
     version: 1,
     monitor: { ...defaultConfig.monitor, ...input.monitor },
     profiles: input.profiles ?? defaultConfig.profiles,
     providers: input.providers ?? defaultConfig.providers,
   };
+  if (!(config.monitor.defaultProfile in config.profiles)) {
+    throw new Error(
+      `/monitor/defaultProfile validation profile not found: ${config.monitor.defaultProfile}`,
+    );
+  }
+  return config;
 }

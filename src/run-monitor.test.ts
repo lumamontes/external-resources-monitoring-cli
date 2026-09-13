@@ -11,6 +11,7 @@ import type {
 const config: MonitorConfig = {
   version: 1,
   monitor: {
+    defaultProfile: 'publication',
     concurrency: 1,
     timeoutMs: 1000,
     retries: 0,
@@ -99,6 +100,31 @@ describe('runMonitor', () => {
 
     expect(receivedConfig).toEqual({ mode: 'fixture' });
     expect(receivedNetwork).toBe(network);
+  });
+
+  it('classifies an unexpected provider failure as inconclusive', async () => {
+    const provider: Provider = {
+      name: 'deterministic',
+      recognize: () => true,
+      observe: async () => {
+        throw new Error('fixture transport failed');
+      },
+    };
+
+    const report = await runMonitor({
+      resources: [resource],
+      config: {
+        ...config,
+        monitor: { ...config.monitor, failOn: ['inaccessible'] },
+      },
+      providers: [provider],
+    });
+
+    expect(report.results[0]).toMatchObject({
+      outcome: 'inconclusive',
+      reason: 'provider check failed: fixture transport failed',
+    });
+    expect(report.shouldFail).toBe(false);
   });
 
   it('limits concurrent provider observations', async () => {

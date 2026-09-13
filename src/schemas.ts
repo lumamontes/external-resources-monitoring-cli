@@ -25,6 +25,7 @@ export const configSchema = {
       type: 'object',
       additionalProperties: false,
       properties: {
+        defaultProfile: { type: 'string', minLength: 1 },
         concurrency: { type: 'integer', minimum: 1 },
         timeoutMs: { type: 'integer', minimum: 1 },
         retries: { type: 'integer', minimum: 0 },

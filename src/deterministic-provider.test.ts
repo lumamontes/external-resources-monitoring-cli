@@ -25,6 +25,7 @@ describe('createDeterministicProvider', () => {
         maxBytes: 1024,
       },
       config: {
+        defaultProfile: 'publication',
         concurrency: 1,
         timeoutMs: 1000,
         retries: 0,
