@@ -1,8 +1,9 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { parse as parseYaml } from 'yaml';
 
 import { describe, expect, it } from 'vitest';
 
@@ -61,6 +62,22 @@ describe('resource-monitor CLI', () => {
     expect(workflow).toContain('actions/upload-artifact@v4');
     expect(workflow).toContain('if: always()');
     expect(workflow).not.toContain('GOOGLE_');
+    const parsed = parseYaml(workflow) as {
+      on: { schedule: unknown; workflow_dispatch: unknown };
+      jobs: {
+        monitor: {
+          steps: Array<{ uses?: string; if?: string }>;
+        };
+      };
+    };
+    expect(parsed.on.schedule).toBeDefined();
+    expect(parsed.on.workflow_dispatch).toBeNull();
+    expect(
+      parsed.jobs.monitor.steps.some(
+        (step) =>
+          step.uses === 'actions/upload-artifact@v4' && step.if === 'always()',
+      ),
+    ).toBe(true);
 
     const directory = await mkdtemp(join(tmpdir(), 'resource-workflow-'));
     try {
@@ -81,6 +98,40 @@ describe('resource-monitor CLI', () => {
       expect(
         await readFile(join(directory, 'resource-report.md'), 'utf8'),
       ).toContain('# External Resources Monitor');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('uses exit code 1 for configured attention outcomes and 2 for CLI errors', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'resource-exit-'));
+    const inputPath = join(directory, 'resources.json');
+    const configPath = join(directory, 'config.yml');
+    try {
+      await writeFile(
+        inputPath,
+        JSON.stringify([
+          { id: 'folder', url: 'https://drive.google.com/drive/folders/x' },
+        ]),
+      );
+      await writeFile(
+        configPath,
+        'version: 1\nmonitor:\n  failOn: [unsupported]\n',
+      );
+      await expect(
+        execFileAsync(process.execPath, [
+          'dist/cli.js',
+          '--input',
+          inputPath,
+          '--config',
+          configPath,
+        ]),
+      ).rejects.toMatchObject({ code: 1 });
+      await expect(
+        execFileAsync(process.execPath, ['dist/cli.js']),
+      ).rejects.toMatchObject({
+        code: 2,
+      });
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
