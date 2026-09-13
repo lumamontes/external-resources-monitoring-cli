@@ -42,6 +42,16 @@ export async function runMonitor({
       return invalidObservation(resource, 'resource URL is malformed');
     }
 
+    const profileName = resource.profile ?? Object.keys(config.profiles)[0];
+    const profile =
+      profileName === undefined ? undefined : config.profiles[profileName];
+    if (!profile) {
+      return invalidObservation(
+        resource,
+        `validation profile not found: ${profileName ?? 'none'}`,
+      );
+    }
+
     const provider = providers.find((candidate) =>
       candidate.recognize(parsedUrl),
     );
@@ -56,16 +66,6 @@ export async function runMonitor({
         durationMs: 0,
         evidence: { url: resource.url },
       };
-    }
-
-    const profileName = resource.profile ?? Object.keys(config.profiles)[0];
-    const profile =
-      profileName === undefined ? undefined : config.profiles[profileName];
-    if (!profile) {
-      return invalidObservation(
-        resource,
-        `validation profile not found: ${profileName ?? 'none'}`,
-      );
     }
 
     return provider.observe(resource, {

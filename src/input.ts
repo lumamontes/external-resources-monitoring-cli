@@ -26,6 +26,7 @@ export class InputValidationError extends Error {
 export function parseResourceInput(
   text: string,
   format: InputFormat,
+  profiles?: Record<string, unknown>,
 ): Resource[] {
   let value: unknown;
   try {
@@ -60,6 +61,11 @@ export function parseResourceInput(
       );
     }
     seenIds.add(resource.id);
+    if (resource.profile && profiles && !(resource.profile in profiles)) {
+      throw new InputValidationError(
+        `/${index}/profile validation profile not found: ${resource.profile}`,
+      );
+    }
   }
 
   return resources;

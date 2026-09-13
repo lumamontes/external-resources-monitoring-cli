@@ -7,6 +7,7 @@ describe('parseResourceInput', () => {
     const resources = parseResourceInput(
       'id,url,title,profile\n zine-001 , https://example.test/a.pdf , A publication , publication\n',
       'csv',
+      { publication: {} },
     );
 
     expect(resources).toEqual([
@@ -38,5 +39,21 @@ describe('parseResourceInput', () => {
         'json',
       ),
     ).toThrow(/duplicate resource ID/);
+  });
+
+  it('rejects references to unknown validation profiles', () => {
+    expect(() =>
+      parseResourceInput(
+        JSON.stringify([
+          {
+            id: 'zine-001',
+            url: 'https://example.test/a.pdf',
+            profile: 'image',
+          },
+        ]),
+        'json',
+        { publication: {} },
+      ),
+    ).toThrow(/validation profile not found/);
   });
 });

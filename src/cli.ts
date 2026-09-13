@@ -15,10 +15,10 @@ try {
 
   const inputText = await readFile(args.input, 'utf8');
   const format = args.format ?? inferFormat(args.input);
-  const resources = parseResourceInput(inputText, format);
   const config = args.config
     ? parseConfig(await readFile(args.config, 'utf8'))
     : parseConfig();
+  const resources = parseResourceInput(inputText, format, config.profiles);
   const provider = createDeterministicProvider({
     'https://example.test/publication.pdf': {
       outcome: 'available',

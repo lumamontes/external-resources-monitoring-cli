@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "pretest": "npm run build",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "lint": "eslint .",

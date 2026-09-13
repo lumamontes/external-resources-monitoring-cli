@@ -32,7 +32,7 @@ describe('createDeterministicProvider', () => {
         failOn: ['inaccessible', 'invalid-input'],
       },
       providerConfig: {},
-      network: async (_url: URL) => new Response(),
+      network: async () => new Response(),
     });
 
     expect(observation).toMatchObject({
