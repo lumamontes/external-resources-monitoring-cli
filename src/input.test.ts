@@ -29,6 +29,15 @@ describe('parseResourceInput', () => {
     ).toThrow(/id/);
   });
 
+  it('rejects malformed URLs during input validation', () => {
+    expect(() =>
+      parseResourceInput(
+        JSON.stringify([{ id: 'zine-001', url: 'not a url' }]),
+        'json',
+      ),
+    ).toThrow(/uri/);
+  });
+
   it('rejects duplicate resource IDs', () => {
     expect(() =>
       parseResourceInput(

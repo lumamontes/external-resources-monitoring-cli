@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+
 import { parse } from 'csv-parse/sync';
 import { Ajv } from 'ajv';
 
@@ -7,11 +9,11 @@ import { errorMessage, formatValidationErrors } from './validation-errors.js';
 
 type InputFormat = 'csv' | 'json';
 
-const validator = new Ajv({
-  allErrors: true,
-  strict: true,
-  formats: { uri: true },
-});
+const validator = new Ajv({ allErrors: true, strict: true });
+const addFormats = createRequire(import.meta.url)('ajv-formats') as (
+  validator: Ajv,
+) => Ajv;
+addFormats(validator);
 const validateResources = validator.compile<Resource[]>(
   resourceCollectionSchema,
 );
