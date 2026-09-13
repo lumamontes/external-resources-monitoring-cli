@@ -9,6 +9,7 @@ import { createGoogleDriveProvider } from './google-drive-provider.js';
 import { InputValidationError, parseResourceInput } from './input.js';
 import { renderMarkdownReport } from './markdown-report.js';
 import { runMonitor } from './run-monitor.js';
+import type { RunReport } from './types.js';
 
 const args = parseArguments(process.argv.slice(2));
 
@@ -33,12 +34,7 @@ try {
     config,
     providers: [createGoogleDriveProvider(), provider],
   });
-  const output = `${JSON.stringify(report, null, 2)}\n`;
-
-  if (args.output) await writeFile(args.output, output, 'utf8');
-  else process.stdout.write(output);
-  if (args.markdownOutput)
-    await writeFile(args.markdownOutput, renderMarkdownReport(report), 'utf8');
+  await writeReport(report, args);
 
   process.exitCode = report.shouldFail ? 1 : 0;
 } catch (error) {
@@ -60,21 +56,24 @@ try {
       ],
       shouldFail: true,
     };
-    const output = `${JSON.stringify(report, null, 2)}\n`;
-    if (args.output) await writeFile(args.output, output, 'utf8');
-    else process.stdout.write(output);
-    if (args.markdownOutput)
-      await writeFile(
-        args.markdownOutput,
-        renderMarkdownReport(report),
-        'utf8',
-      );
+    await writeReport(report, args);
     process.exit(1);
   }
   process.stderr.write(
     `${error instanceof Error ? error.message : String(error)}\n`,
   );
   process.exitCode = 2;
+}
+
+async function writeReport(
+  report: RunReport,
+  args: { output?: string; markdownOutput?: string },
+): Promise<void> {
+  const output = `${JSON.stringify(report, null, 2)}\n`;
+  if (args.output) await writeFile(args.output, output, 'utf8');
+  else process.stdout.write(output);
+  if (args.markdownOutput)
+    await writeFile(args.markdownOutput, renderMarkdownReport(report), 'utf8');
 }
 
 function parseArguments(values: string[]): {
