@@ -62,4 +62,4 @@ state and signed transition webhooks are deferred to a later milestone.
 
 ## Scope
 
-The first milestone is a stateless, bounded batch monitor. It does not store credentials, make authenticated checks, crawl sites, or change publication decisions. Google Drive anonymous PDF checking, Markdown reports, GitHub Actions scheduling, durable history, and signed transition webhooks are subsequent milestones.
+The first milestone is a stateless, bounded batch monitor. It does not store credentials, make authenticated checks, crawl sites, or change publication decisions. Durable cross-run history and signed transition webhooks are subsequent milestones.

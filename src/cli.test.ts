@@ -46,4 +46,20 @@ describe('resource-monitor CLI', () => {
       await rm(directory, { recursive: true, force: true });
     }
   });
+
+  it('documents a reproducible workflow without live external checks', async () => {
+    const workflow = await readFile(
+      '.github/workflows/resource-monitor.yml',
+      'utf8',
+    );
+
+    expect(workflow).toContain('workflow_dispatch:');
+    expect(workflow).toContain('cron:');
+    expect(workflow).toContain('--config examples/monitor.yml');
+    expect(workflow).toContain('--output resource-report.json');
+    expect(workflow).toContain('--markdown-output resource-report.md');
+    expect(workflow).toContain('actions/upload-artifact@v4');
+    expect(workflow).toContain('if: always()');
+    expect(workflow).not.toContain('GOOGLE_');
+  });
 });

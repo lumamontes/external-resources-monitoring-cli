@@ -24,7 +24,8 @@ jobs:
         continue-on-error: true
         run: |
           node dist/cli.js \
-            --input examples/google-drive.json \
+            --input examples/resources.json \
+            --config examples/monitor.yml \
             --output resource-report.json \
             --markdown-output resource-report.md
       - name: Upload monitor reports
