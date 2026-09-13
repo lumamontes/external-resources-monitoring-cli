@@ -154,7 +154,12 @@ async function observeDriveResource(
       );
     }
 
-    const validation = validateContent(body, contentType, context.profile);
+    // Drive commonly labels downloadable PDFs as generic binary data.
+    const validation = validateContent(
+      body,
+      contentType === 'application/octet-stream' ? undefined : contentType,
+      context.profile,
+    );
     return observation(
       resource,
       validation.valid ? 'available' : 'inaccessible',
