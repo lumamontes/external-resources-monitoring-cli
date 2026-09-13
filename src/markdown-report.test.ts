@@ -72,6 +72,7 @@ describe('renderMarkdownReport', () => {
     expect(markdown).toContain('| unsupported | 1 |');
     expect(markdown).toContain('| invalid-input | 1 |');
     expect(markdown).toContain('Missing PDF');
+    expect(markdown).not.toContain('available-1');
     expect(markdown).toContain('anonymous retrieval returned HTTP 403');
     expect(markdown).toContain('URL: `not a url`');
     expect(markdown).toContain('does not mean a resource was deleted');
@@ -79,7 +80,6 @@ describe('renderMarkdownReport', () => {
     for (const resourceId of [
       'missing-1',
       'unknown-1',
-      'available-1',
       'unsupported-1',
       'invalid-1',
     ]) {

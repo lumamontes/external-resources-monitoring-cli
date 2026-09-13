@@ -24,6 +24,7 @@ export function renderMarkdownReport(report: RunReport): string {
     '',
   ];
   for (const outcome of outcomeOrder) {
+    if (outcome === 'available') continue;
     const results = report.results.filter(
       (result) => result.outcome === outcome,
     );
