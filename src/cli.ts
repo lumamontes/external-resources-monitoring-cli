@@ -5,6 +5,7 @@ import { basename } from 'node:path';
 
 import { parseConfig } from './config.js';
 import { createDeterministicProvider } from './deterministic-provider.js';
+import { createGoogleDriveProvider } from './google-drive-provider.js';
 import { parseResourceInput } from './input.js';
 import { runMonitor } from './run-monitor.js';
 
@@ -26,7 +27,11 @@ try {
       evidence: { contentType: 'application/pdf' },
     },
   });
-  const report = await runMonitor({ resources, config, providers: [provider] });
+  const report = await runMonitor({
+    resources,
+    config,
+    providers: [createGoogleDriveProvider(), provider],
+  });
   const output = `${JSON.stringify(report, null, 2)}\n`;
 
   if (args.output) await writeFile(args.output, output, 'utf8');

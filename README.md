@@ -22,7 +22,15 @@ npm run build
 node dist/cli.js --input examples/resources.json
 ```
 
-The CLI currently includes a deterministic provider for the synthetic example. The Google Drive provider is the next implementation slice. JSON output is written to standard output unless `--output` is supplied.
+The CLI includes a Google Drive provider and a deterministic provider for the synthetic example. Google Drive checks make anonymous requests and do not use credentials. JSON output is written to standard output unless `--output` is supplied.
+
+To check a public Google Drive file without credentials, provide a collection containing a supported file-sharing URL:
+
+```sh
+node dist/cli.js --input my-resources.json
+```
+
+Drive folders and non-Drive URLs are reported as unsupported in this milestone. A viewer page is not considered available unless bounded retrieval produces the expected PDF content.
 
 ## Input
 
